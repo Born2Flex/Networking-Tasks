@@ -14,6 +14,6 @@ public class Person {
     private LocalDate birthDate;
     private Address address;
     private List<String> interests;
-    private List<Address> pastAddresses;
+    private List<Address> visitedAddresses;
     private int favoriteNumber;
 }

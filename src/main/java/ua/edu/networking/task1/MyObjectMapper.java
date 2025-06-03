@@ -1,6 +1,7 @@
 package ua.edu.networking.task1;
 
 import lombok.extern.slf4j.Slf4j;
+import ua.edu.networking.task1.exceptions.ObjectSerializationError;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -8,10 +9,14 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+// TODO Handling of an ENUM? Arrays?
 
 @Slf4j
 public class MyObjectMapper {
@@ -30,52 +35,45 @@ public class MyObjectMapper {
     }
 
     public String serialize(Object obj) {
-        StringBuilder sb = new StringBuilder("{");
-        try {
-            for (var field : obj.getClass().getDeclaredFields()) {
-                field.setAccessible(true);
-                log.info("{}: {}", field.getName(), field.get(obj));
-                if (isSimpleType(field.getType())) {
-                    sb.append("\"")
-                            .append(field.getName())
-                            .append("\":\"")
-                            .append(field.get(obj))
-                            .append("\"")
-                            .append(",");
-                } else if (field.get(obj) instanceof Collection<?> collection) {
-                    sb.append("\"")
-                            .append(field.getName())
-                            .append("\":")
-                            .append(serializeCollection(field, collection))
-                            .append(",");
-                } else {
-                    sb.append("\"")
-                            .append(field.getName())
-                            .append("\":")
-                            .append(serialize(field.get(obj)))
-                            .append(",");
-                }
-            }
-        } catch (IllegalAccessException e) {
-            log.error("An error occurred during accessing field of object: {}", e.getMessage(), e);
-        }
-        sb.append("}");
-        return sb.toString();
+        return Arrays.stream(obj.getClass().getDeclaredFields())
+                .map(field -> serializeField(obj, field))
+                .collect(Collectors.joining(",", "{", "}"));
+
     }
 
-    private String serializeCollection(Field collectionField, Collection<?> collection) {
-        StringBuilder sb = new StringBuilder("[");
-        for (var obj : collection) {
-            if (isSimpleType((Class<?>) ((ParameterizedType) collectionField.getGenericType()).getActualTypeArguments()[0])) {
-                sb.append(obj);
-            } else {
-                sb.append(serialize(obj));
-            }
-            sb.append(",");
+    private String serializeField(Object obj, Field field) {
+        try {
+            return serializeFieldAccordingToType(obj, field);
+        } catch (IllegalAccessException e) {
+            log.error("An error occurred during accessing field: {}", e.getMessage(), e);
+            throw new ObjectSerializationError(e);
         }
-        sb.append("]");
-        return sb.toString();
     }
+
+    private String serializeFieldAccordingToType(Object obj, Field field) throws IllegalAccessException {
+        field.setAccessible(true);
+        log.debug("{}: {}", field.getName(), field.get(obj));
+        if (isSimpleType(field.getType())) {
+            return "\"" + field.getName() + "\":\"" + field.get(obj) + "\"";
+        } else if (field.get(obj) instanceof Collection<?> collection) {
+            return "\"" + field.getName() + "\":[" + serializeCollectionElements(field, collection) + "]";
+        } else {
+            return "\"" + field.getName() + "\":" + serialize(field.get(obj));
+        }
+    }
+
+    private String serializeCollectionElements(Field collectionField, Collection<?> collection) {
+        return collection.stream()
+                .map(elem -> {
+                    if (isSimpleType((Class<?>) ((ParameterizedType) collectionField.getGenericType()).getActualTypeArguments()[0])) {
+                        return "\"" + elem.toString() + "\"";
+                    } else {
+                        return serialize(elem);
+                    }
+                })
+                .collect(Collectors.joining(","));
+    }
+
 
     private boolean isSimpleType(Class<?> type) {
         return isPrimitiveOrWrapper(type)
