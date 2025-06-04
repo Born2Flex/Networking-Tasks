@@ -9,6 +9,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 public class Person {
+    private static int numOfObjects = 0;
     private String firstName;
     private String lastName;
     private LocalDate birthDate;
@@ -16,4 +17,8 @@ public class Person {
     private List<String> interests;
     private List<Address> visitedAddresses;
     private int favoriteNumber;
+
+    {
+        numOfObjects++;
+    }
 }

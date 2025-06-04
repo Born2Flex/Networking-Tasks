@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.edu.networking.task1.exceptions.ObjectSerializationError;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -12,30 +13,31 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-// TODO Handling of an ENUM? Arrays?
 
 @Slf4j
 public class MyObjectMapper {
-    private static final Map<Class<?>, Class<?>> WRAPPER_TYPE_MAP;
+    private static final Set<Class<?>> WRAPPER_TYPES;
 
     static {
-        WRAPPER_TYPE_MAP = new HashMap<>();
-        WRAPPER_TYPE_MAP.put(Integer.class, int.class);
-        WRAPPER_TYPE_MAP.put(Byte.class, byte.class);
-        WRAPPER_TYPE_MAP.put(Character.class, char.class);
-        WRAPPER_TYPE_MAP.put(Boolean.class, boolean.class);
-        WRAPPER_TYPE_MAP.put(Double.class, double.class);
-        WRAPPER_TYPE_MAP.put(Float.class, float.class);
-        WRAPPER_TYPE_MAP.put(Long.class, long.class);
-        WRAPPER_TYPE_MAP.put(Short.class, short.class);
+        WRAPPER_TYPES = new HashSet<>();
+        WRAPPER_TYPES.add(Integer.class);
+        WRAPPER_TYPES.add(Byte.class);
+        WRAPPER_TYPES.add(Character.class);
+        WRAPPER_TYPES.add(Boolean.class);
+        WRAPPER_TYPES.add(Double.class);
+        WRAPPER_TYPES.add(Float.class);
+        WRAPPER_TYPES.add(Long.class);
+        WRAPPER_TYPES.add(Short.class);
     }
 
     public String serialize(Object obj) {
         return Arrays.stream(obj.getClass().getDeclaredFields())
+                .filter(f -> !Modifier.isStatic(f.getModifiers()))
+                .filter(f -> !Modifier.isTransient(f.getModifiers()))
                 .map(field -> serializeField(obj, field))
                 .collect(Collectors.joining(",", "{", "}"));
 
@@ -86,6 +88,6 @@ public class MyObjectMapper {
     }
 
     private boolean isPrimitiveOrWrapper(Class<?> type) {
-        return WRAPPER_TYPE_MAP.containsKey(type) || type.isPrimitive();
+        return WRAPPER_TYPES.contains(type) || type.isPrimitive();
     }
 }
