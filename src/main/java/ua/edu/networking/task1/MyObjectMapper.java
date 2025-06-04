@@ -17,7 +17,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-
 @Slf4j
 public class MyObjectMapper {
     private static final Set<Class<?>> WRAPPER_TYPES;
@@ -36,8 +35,7 @@ public class MyObjectMapper {
 
     public String serialize(Object obj) {
         return Arrays.stream(obj.getClass().getDeclaredFields())
-                .filter(f -> !Modifier.isStatic(f.getModifiers()))
-                .filter(f -> !Modifier.isTransient(f.getModifiers()))
+                .filter(f -> !Modifier.isStatic(f.getModifiers()) && !Modifier.isTransient(f.getModifiers()))
                 .map(field -> serializeField(obj, field))
                 .collect(Collectors.joining(",", "{", "}"));
 
