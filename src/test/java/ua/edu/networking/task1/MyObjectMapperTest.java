@@ -3,6 +3,7 @@ package ua.edu.networking.task1;
 import lombok.AllArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ua.edu.networking.task1.samples.inheritance.Child;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -84,6 +85,17 @@ class MyObjectMapperTest {
                 {"name":"Paul","salary":"12345.67","birthday":"1990-01-01"}""";
 
         String result = mapper.serialize(user);
+
+        assertEquals(expected, result);
+    }
+
+    @Test
+    void shouldSerializeChildObjectIncludingAllParentFields() {
+        Child child = new Child(1, "John", "Snow", "Jogging");
+        String expected = """
+                {"id":"1","firstName":"John","lastName":"Snow","hobby":"Jogging"}""";
+
+        String result = mapper.serialize(child);
 
         assertEquals(expected, result);
     }
