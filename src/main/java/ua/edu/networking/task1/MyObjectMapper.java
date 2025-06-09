@@ -10,9 +10,11 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -64,27 +66,51 @@ public class MyObjectMapper {
         if (isSimpleType(field.getType())) {
             return "\"" + field.getName() + "\":\"" + field.get(obj) + "\"";
         } else if (field.get(obj) instanceof Collection<?> collection) {
-            return "\"" + field.getName() + "\":[" + serializeCollectionElements(field, collection) + "]";
+            Class<?> collectionType = (Class<?>) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
+            return "\"" + field.getName() + "\":" + serializeCollection(collectionType, collection);
+        } else if (field.get(obj) instanceof Map<?, ?> map) {
+            return "\"" + field.getName() + "\":" + serializeMap(map);
+        } else if (field.get(obj).getClass().isArray()) {
+            Class<?> arrayType = field.get(obj).getClass().getComponentType();
+            return "\"" + field.getName() + "\":" + serializeCollection(arrayType, field.get(obj));
         } else {
             return "\"" + field.getName() + "\":" + serialize(field.get(obj));
         }
     }
 
-    private String serializeCollectionElements(Field collectionField, Collection<?> collection) {
+    private String serializeMap(Map<?, ?> map) {
+        return map.keySet().stream()
+                .map(key -> serializePair(key, map.get(key)))
+                .collect(Collectors.joining(",", "{", "}"));
+    }
+
+    private String serializePair(Object key, Object value) {
+        String serializedValue = isSimpleType(value.getClass()) ? "\"" + value + "\"" : serialize(value);
+        return "\"" + key + "\":" + serializedValue;
+    }
+
+    private String serializeCollection(Class<?> collectionType, Object object) {
+        if (!object.getClass().isArray()) {
+            throw new IllegalArgumentException("Object is not an array");
+        }
+        return serializeCollection(collectionType, Arrays.asList((Object[]) object));
+    }
+
+    private String serializeCollection(Class<?> collectionType, Collection<?> collection) {
         return collection.stream()
                 .map(elem -> {
-                    if (isSimpleType((Class<?>) ((ParameterizedType) collectionField.getGenericType()).getActualTypeArguments()[0])) {
+                    if (isSimpleType(collectionType)) {
                         return "\"" + elem.toString() + "\"";
                     } else {
                         return serialize(elem);
                     }
                 })
-                .collect(Collectors.joining(","));
+                .collect(Collectors.joining(",", "[", "]"));
     }
-
 
     private boolean isSimpleType(Class<?> type) {
         return isPrimitiveOrWrapper(type)
+                || type.isEnum()
                 || type == String.class
                 || type == Date.class
                 || type == LocalDate.class
