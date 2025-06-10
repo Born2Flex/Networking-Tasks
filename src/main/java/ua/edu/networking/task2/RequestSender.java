@@ -12,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.List;
+import java.util.stream.IntStream;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -81,12 +82,17 @@ public class RequestSender {
 
     private <T> T parseResponseBody(List<String> response, Class<T> type) {
         try {
-            if (response.size() < 8) {
-                throw new IllegalStateException("Unexpected response structure");
+            if (response.isEmpty()) {
+                throw new IllegalStateException("Empty response");
             }
-            return mapper.readValue(response.get(7), type);
+            int emptyLineIndex = IntStream.range(0, response.size())
+                    .filter(i -> response.get(i).isBlank())
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Invalid HTTP response: no empty line after headers"));
+
+            return mapper.readValue(String.join("", response.subList(emptyLineIndex + 2, response.size())), type);
         } catch (IOException e) {
-            log.error("Failed to parse response", e);
+            log.error("Failed to parse response body", e);
             throw new RuntimeException("Deserialization error", e);
         }
     }
