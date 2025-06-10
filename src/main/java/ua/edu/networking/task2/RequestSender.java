@@ -5,12 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.TrustManager;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -19,6 +25,7 @@ import java.util.stream.IntStream;
 public class RequestSender {
     private final String host;
     private final int port;
+    private final boolean secureConnection;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public Object[] getRequest() {
@@ -57,13 +64,13 @@ public class RequestSender {
     }
 
     private <T> T processHttpRequest(String request, Class<T> clazz) {
-        List<String> response = sendHttpRequestWithSocket(request);
+        List<String> response = sendHttpRequestWithSocket(request, secureConnection);
         logResponse(response);
         return parseResponseBody(response, clazz);
     }
 
-    private List<String> sendHttpRequestWithSocket(String request) {
-        try (Socket socket = new Socket(host, port);
+    private List<String> sendHttpRequestWithSocket(String request, boolean secureSocket) {
+        try (Socket socket = createSocket(host, port, secureSocket);
              BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
@@ -72,6 +79,24 @@ public class RequestSender {
             return reader.lines().toList();
         } catch (IOException exception) {
             log.error("HTTP request failed", exception);
+            throw new RuntimeException(exception);
+        }
+    }
+
+    private Socket createSocket(String host, int port, boolean secureSocket) throws IOException {
+        return secureSocket ? createSSLSocket(host, port) : new Socket(host, port);
+    }
+
+    private SSLSocket createSSLSocket(String host, int port) {
+        try {
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, new TrustManager[]{new MyTrustManager()}, new SecureRandom());
+            return (SSLSocket) sslContext.getSocketFactory().createSocket(host, port);
+        } catch (NoSuchAlgorithmException | KeyManagementException exception) {
+            log.error("Error occurred while creating SSL Context", exception);
+            throw new RuntimeException(exception);
+        } catch (IOException exception) {
+            log.error("HTTPS request failed", exception);
             throw new RuntimeException(exception);
         }
     }

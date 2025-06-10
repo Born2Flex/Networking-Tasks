@@ -7,8 +7,8 @@ import java.util.Arrays;
 @Slf4j
 public class Main {
     public static void main(String[] args) {
-        RequestSender requestSender = new RequestSender("localhost", 8080);
+        RequestSender requestSender = new RequestSender("localhost", 8080, true);
         log.info(Arrays.toString(requestSender.getRequest()));
-        log.info(requestSender.postRequest(new Note("Abra Cadabra", "DS")).toString());
+        log.info(requestSender.postRequest(new Note("Some notes", "Danylo")).toString());
     }
 }
