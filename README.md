@@ -21,5 +21,13 @@ the socket should receive a 200 response.
    - Process  the response
    - Parse the JSON
    - Find the largest picture
-   - NASA Open APIs
- 
+   - NASA Open APIs 
+### 3.2. Build the largest picture endpoint:
+   - Create a new web app
+   - Build an HTTP GET endpoint that shows the largest Mars picture
+   - Accept a sol parameter
+   - Get picture URLs from this endpoint: https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos (make sure you specify your api_key and pass sol)
+   - Find the largest picture (make sure you handle redirects properly)
+   - Return the actual picture file so the browser displays the image when opening your endpoint
+   - Optimise your solution
+   - Make a couple comments about your thoughts on optimization
